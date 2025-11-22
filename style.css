@@ -1,0 +1,38 @@
+/* 隐藏滚动条但保留滚动功能 */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+/* 简单的输入框通用样式 */
+.input-field {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.input-field:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+/* 图片网格布局 */
+.img-grid-1 { grid-template-columns: 1fr; }
+.img-grid-2 { grid-template-columns: 1fr 1fr; }
+.img-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.img-grid-4 { grid-template-columns: 1fr 1fr; }
+
+/* 底部安全区适配 (iPhone X+) */
+.pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 导航激活态 */
+.nav-btn.active {
+    color: #2563eb;
+}

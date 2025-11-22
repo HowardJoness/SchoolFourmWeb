@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>设置</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-white h-screen">
+    <header class="flex items-center p-4 border-b">
+        <a href="me.html" class="text-gray-600 mr-4"><i class="fas fa-arrow-left"></i></a>
+        <h2 class="font-bold text-gray-800">编辑资料</h2>
+    </header>
+    
+    <div class="p-6">
+        <div class="flex flex-col items-center mb-8">
+            <div class="relative w-24 h-24 mb-4">
+                <img id="preview" src="" class="w-full h-full rounded-full object-cover bg-gray-200">
+                <label for="file" class="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full shadow cursor-pointer">
+                    <i class="fas fa-camera text-xs"></i>
+                </label>
+                <input type="file" id="file" class="hidden" accept="image/*">
+            </div>
+            <p class="text-xs text-gray-400">点击图标修改头像</p>
+        </div>
+
+        <div class="space-y-4">
+            <div><label class="text-sm font-bold text-gray-700">用户名</label><input id="uname" type="text" class="w-full p-2 border rounded mt-1"></div>
+            <div><label class="text-sm font-bold text-gray-700">简介</label><textarea id="bio" class="w-full p-2 border rounded mt-1 h-24 resize-none"></textarea></div>
+            <button onclick="save()" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold">保存修改</button>
+            <div class="border-t pt-6 mt-6">
+                <button onclick="logout()" class="w-full bg-red-50 text-red-600 p-3 rounded-lg font-medium">退出登录</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="utils.js"></script>
+    <script>
+        checkAuth();
+        let newAvatarUrl = null;
+
+        // 初始化加载
+        (async () => {
+            const u = await api('/user/me');
+            if(u) {
+                document.getElementById('uname').value = u.username;
+                document.getElementById('bio').value = u.bio;
+                document.getElementById('preview').src = getAvatarUrl(u.avatar_url);
+            }
+        })();
+
+        // 上传头像
+        document.getElementById('file').onchange = async e => {
+            const f = e.target.files[0];
+            if(!f) return;
+            const fd = new FormData(); fd.append('file', f);
+            toast('上传中...');
+            const res = await api('/user/upload-avatar', 'POST', fd, true);
+            if(res) {
+                newAvatarUrl = res.url;
+                document.getElementById('preview').src = getAvatarUrl(res.url);
+                toast('上传成功，请点击保存');
+            }
+        };
+
+        async function save() {
+            const body = {
+                username: document.getElementById('uname').value,
+                bio: document.getElementById('bio').value
+            };
+            if(newAvatarUrl) body.avatar_url = newAvatarUrl;
+            const res = await api('/user/update', 'PUT', body);
+            if(res) { toast('保存成功'); setTimeout(()=>window.location.href='me.html', 1000); }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

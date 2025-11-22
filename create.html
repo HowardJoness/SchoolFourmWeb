@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>发帖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white h-screen flex flex-col">
+    <header class="flex justify-between items-center p-4 border-b">
+        <button onclick="history.back()" class="text-gray-500">取消</button>
+        <span class="font-bold">发布帖子</span>
+        <button onclick="pub()" class="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded-full">发布</button>
+    </header>
+    <div class="p-4 flex-1">
+        <textarea id="txt" class="w-full h-40 text-lg outline-none resize-none placeholder-gray-400" placeholder="分享新鲜事..."></textarea>
+        <div class="mt-4">
+            <label class="text-sm text-gray-500 mb-2 block">图片链接 (逗号分隔)</label>
+            <input id="imgs" type="text" class="w-full p-2 bg-gray-50 rounded border">
+        </div>
+    </div>
+    <script src="utils.js"></script>
+    <script>
+        checkAuth();
+        async function pub() {
+            const c = document.getElementById('txt').value;
+            if(!c) return toast('请输入内容');
+            const imgs = document.getElementById('imgs').value.split(',').filter(x=>x.trim());
+            const res = await api('/post/create', 'POST', {content: c, images: imgs});
+            if(res) { toast('发布成功'); window.location.href='home.html'; }
+        }
+    </script>
+</body>
+</html>

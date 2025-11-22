@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>我的</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 pb-16">
+    <!-- 顶部个人信息区域 -->
+    <div class="bg-white p-6 pt-10 pb-8 mb-2 flex flex-col items-center relative shadow-sm">
+        <!-- 设置按钮 (右上角) -->
+        <a href="setting.html" class="absolute top-4 right-4 text-gray-400 p-2">
+            <i class="fas fa-cog text-xl"></i>
+        </a>
+        
+        <!-- 头像 -->
+        <img id="avatar" src="" class="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg mb-3 bg-gray-200">
+        
+        <!-- 用户名 -->
+        <h2 id="username" class="text-xl font-bold text-gray-800">加载中...</h2>
+        
+        <!-- 个人简介 -->
+        <p id="bio" class="text-gray-500 text-sm mt-1 text-center max-w-xs">...</p>
+    </div>
+
+    <!-- 收藏列表 -->
+    <div class="bg-white shadow-sm">
+        <div class="px-4 py-3 border-b font-bold text-gray-700 flex items-center">
+            <i class="fas fa-star text-yellow-400 mr-2"></i> 我的收藏
+        </div>
+        <div id="fav-list" class="divide-y divide-gray-100"></div>
+    </div>
+
+    <script src="utils.js"></script>
+    <script>
+        checkAuth();
+        renderBottomNav('me');
+
+        async function load() {
+            // 加载个人信息
+            const u = await api('/user/me');
+            if(u) {
+                document.getElementById('username').innerText = u.username;
+                document.getElementById('bio').innerText = u.bio || '暂无介绍';
+                document.getElementById('avatar').src = getAvatarUrl(u.avatar_url);
+            }
+
+            // 加载收藏
+            const uid = localStorage.getItem('user_id');
+            const favs = await api(`/user/${uid}/favorites`);
+            const list = document.getElementById('fav-list');
+            list.innerHTML = '';
+            
+            if(favs && favs.length) {
+                favs.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'p-4 flex items-center space-x-3 cursor-pointer hover:bg-gray-50';
+                    div.onclick = () => window.location.href = `post.html?id=${p.id}`;
+                    div.innerHTML = `
+                        <div class="flex-1 overflow-hidden">
+                            <div class="text-sm text-gray-800 truncate font-medium">${p.content}</div>
+                            <div class="text-xs text-gray-400 mt-1">@${p.author.username}</div>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+                    `;
+                    list.appendChild(div);
+                });
+            } else {
+                list.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">暂无收藏内容</div>';
+            }
+        }
+        load();
+    </script>
+</body>
+</html>

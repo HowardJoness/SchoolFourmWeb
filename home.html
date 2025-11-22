@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>首页</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 pb-16">
+    <!-- 下拉刷新 Loading -->
+    <div id="ptr" class="fixed top-0 w-full flex justify-center pt-2 transition-transform duration-300 -translate-y-full z-50">
+        <div class="bg-white rounded-full p-2 shadow text-blue-600"><i class="fas fa-sync fa-spin"></i></div>
+    </div>
+
+    <header class="fixed top-0 w-full bg-white/95 backdrop-blur shadow-sm z-40 px-4 py-3 flex justify-between items-center">
+        <h1 class="text-lg font-bold text-gray-800">校园广场</h1>
+        <a href="create.html" class="text-blue-600 font-medium"><i class="fas fa-plus-circle"></i> 发帖</a>
+    </header>
+    
+    <div id="list" class="mt-14 px-0 space-y-2"></div>
+    <div id="loader" class="text-center py-4 text-gray-400 text-sm hidden">加载中...</div>
+
+    <script src="utils.js"></script>
+    <script>
+        checkAuth();
+        renderBottomNav('home');
+        
+        let cursor = null, loading = false, hasMore = true;
+        const listEl = document.getElementById('list');
+
+        async function loadPosts(refresh = false) {
+            if (loading) return;
+            if (refresh) { cursor = null; hasMore = true; listEl.innerHTML = ''; }
+            if (!hasMore) return;
+            
+            loading = true;
+            document.getElementById('loader').classList.remove('hidden');
+            let url = `/post/list?limit=10${cursor ? '&cursor='+cursor : ''}`;
+            const posts = await api(url);
+            loading = false;
+            document.getElementById('loader').classList.add('hidden');
+
+            if (posts && posts.length) {
+                posts.forEach(p => {
+                    cursor = p.id;
+                    const div = document.createElement('div');
+                    div.className = 'bg-white mb-2 shadow-sm cursor-pointer';
+                    div.onclick = (e) => { if(!['BUTTON','I'].includes(e.target.tagName)) window.location.href = `post.html?id=${p.id}`; };
+                    
+                    // 构建图片HTML
+                    let imgHtml = '';
+                    if(p.images.length) {
+                        imgHtml = `<div class="px-4 pb-2 grid grid-cols-3 gap-1">` + 
+                        p.images.map(src => `<div class="aspect-square bg-gray-100 rounded overflow-hidden"><img src="${src}" class="w-full h-full object-cover"></div>`).join('') + 
+                        `</div>`;
+                    }
+
+                    div.innerHTML = `
+                        <div class="flex justify-between items-start p-4 pb-2">
+                            <div class="flex items-center">
+                                <img src="${getAvatarUrl(p.author.avatar_url)}" class="w-10 h-10 rounded-full bg-gray-200 object-cover mr-3 border border-gray-100">
+                                <div><div class="font-bold text-sm">${p.author.username}</div><div class="text-xs text-gray-400">${new Date(p.created_at).toLocaleString()}</div></div>
+                            </div>
+                        </div>
+                        <div class="px-4 py-2 text-base text-gray-800 whitespace-pre-wrap">${p.content}</div>
+                        ${imgHtml}
+                        <div class="flex border-t border-gray-50 mt-2">
+                            <button onclick="event.stopPropagation();like(this, ${p.id})" class="flex-1 py-3 text-center ${p.is_liked?'text-red-500':'text-gray-400'}"><i class="fas fa-heart"></i> <span>${p.like_count}</span></button>
+                            <button class="flex-1 py-3 text-center text-gray-400"><i class="fas fa-comment"></i> ${p.comment_count}</button>
+                        </div>
+                    `;
+                    listEl.appendChild(div);
+                });
+            } else hasMore = false;
+        }
+
+        // 点赞
+        async function like(btn, pid) {
+            const isLiked = btn.classList.contains('text-red-500');
+            const span = btn.querySelector('span');
+            let count = parseInt(span.innerText);
+            btn.classList.toggle('text-red-500');
+            btn.classList.toggle('text-gray-400');
+            span.innerText = isLiked ? count - 1 : count + 1;
+            await api('/interaction/like', 'POST', {post_id: pid});
+        }
+
+        // 下拉刷新
+        let startY = 0, pulling = false;
+        window.addEventListener('touchstart', e => { if(window.scrollY===0) { startY = e.touches[0].clientY; pulling = true; } });
+        window.addEventListener('touchmove', e => {
+            if(!pulling) return;
+            let diff = e.touches[0].clientY - startY;
+            if(diff > 0 && window.scrollY === 0) document.getElementById('ptr').style.transform = `translateY(${Math.min(diff/2 - 50, 10)}px)`;
+        });
+        window.addEventListener('touchend', async e => {
+            pulling = false;
+            const el = document.getElementById('ptr');
+            if(el.style.transform.includes('translateY(10px)')) {
+                await loadPosts(true);
+            }
+            el.style.transform = 'translateY(-100%)';
+        });
+
+        // 滚动加载
+        window.onscroll = () => {
+            if((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) loadPosts();
+        };
+
+        loadPosts();
+    </script>
+</body>
+</html>

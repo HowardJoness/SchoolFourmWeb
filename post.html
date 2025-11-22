@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>帖子详情</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-white pb-16">
+    <!-- 1. 顶部导航栏 -->
+    <header class="sticky top-0 bg-white border-b px-4 py-3 flex items-center z-30">
+        <button onclick="history.back()" class="text-gray-600 mr-4"><i class="fas fa-arrow-left"></i></button>
+        <h2 class="font-bold text-gray-800">帖子详情</h2>
+    </header>
+
+    <!-- 2. 帖子正文容器 (JS会寻找 id="main" 的元素) -->
+    <div id="main" class="p-4 border-b border-gray-100 min-h-[100px]">
+        <div class="text-center text-gray-400 py-10">加载中...</div>
+    </div>
+    
+    <!-- 3. 评论区容器 (JS会寻找 id="comments" 的元素) -->
+    <div class="bg-gray-50 mt-2 min-h-[300px]">
+        <h3 class="px-4 py-2 text-sm text-gray-500 font-medium">评论列表</h3>
+        <div id="comments" class="px-4 pb-4 space-y-4"></div>
+    </div>
+
+    <!-- 4. 底部输入框 -->
+    <div class="fixed bottom-0 w-full bg-white border-t p-3 flex items-center z-30">
+        <input id="inp" type="text" class="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-100 transition" placeholder="说点什么...">
+        <button onclick="send()" class="ml-3 text-blue-600 font-bold text-sm px-2 whitespace-nowrap">发送</button>
+    </div>
+
+    <script src="utils.js"></script>
+    <script>
+        checkAuth();
+        const pid = new URLSearchParams(window.location.search).get('id');
+        if(!pid) {
+            toast('参数错误');
+            setTimeout(() => history.back(), 1000);
+        }
+
+        const currentUserId = parseInt(localStorage.getItem('user_id'));
+        let replyToId = null; // 记录当前正在回复的评论ID
+
+        async function load() {
+            // 加载帖子详情
+            const p = await api(`/post/${pid}`);
+            if(!p) return;
+            
+            // 构建图片 HTML
+            let imgs = '';
+            if(p.images.length) {
+                imgs = p.images.map(s => `<img src="${s}" class="w-full rounded-lg mt-2 border border-gray-100">`).join('');
+            }
+            
+            // 渲染帖子正文 (这里就是报错的地方，现在 id="main" 存在了，就不会报错了)
+            document.getElementById('main').innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex items-center">
+                        <img src="${getAvatarUrl(p.author.avatar_url)}" class="w-10 h-10 rounded-full mr-3 bg-gray-200 object-cover border border-gray-100">
+                        <div>
+                            <div class="font-bold text-sm text-gray-800">${p.author.username}</div>
+                            <div class="text-xs text-gray-400">${new Date(p.created_at).toLocaleString()}</div>
+                        </div>
+                    </div>
+                    ${p.author.id === currentUserId ? `<button onclick="delPost(${p.id})" class="text-gray-400 px-2"><i class="fas fa-trash-alt"></i></button>` : ''}
+                </div>
+                <div class="text-lg text-gray-800 whitespace-pre-wrap leading-relaxed">${p.content}</div>
+                <div class="space-y-2 mt-2">${imgs}</div>
+                <div class="flex mt-4 space-x-4 pt-2">
+                    <button onclick="toggleFav(this)" class="${p.is_favorited ? 'text-yellow-500' : 'text-gray-400'} transition text-sm font-medium flex items-center">
+                        <i class="${p.is_favorited ? 'fas' : 'far'} fa-star mr-1"></i> 收藏
+                    </button>
+                </div>
+            `;
+
+            // 加载并渲染评论
+            loadComments();
+        }
+
+        async function loadComments() {
+            const cmts = await api(`/comment/list?postId=${pid}`);
+            if (!cmts) return;
+
+            const container = document.getElementById('comments');
+            if (cmts.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-400 text-xs py-4">暂无评论，来抢沙发吧~</div>';
+                return;
+            }
+
+            container.innerHTML = cmts.map(c => {
+                const isMine = c.author.id === currentUserId;
+                // 如果是回复别人的评论，显示 "回复 @某某"
+                const replyTag = c.reply_to_username 
+                    ? `<span class="text-blue-600 mr-1 bg-blue-50 px-1 rounded text-xs">回复 @${c.reply_to_username}</span>` 
+                    : '';
+                
+                return `
+                <div class="flex space-x-3 py-3 border-b border-gray-100 last:border-0 active:bg-gray-50 transition" onclick="setReply(${c.id}, '${c.author.username}')">
+                    <img src="${getAvatarUrl(c.author.avatar_url)}" class="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0 object-cover">
+                    <div class="flex-1">
+                        <div class="flex justify-between w-full items-center">
+                            <span class="font-bold text-sm text-gray-700">${c.author.username}</span>
+                            <div class="flex items-center">
+                                <span class="text-xs text-gray-400">${new Date(c.created_at).toLocaleDateString()}</span>
+                                ${isMine ? `<button onclick="event.stopPropagation(); delComment(${c.id})" class="ml-3 text-gray-300 hover:text-red-500 p-1"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
+                            </div>
+                        </div>
+                        <div class="text-sm text-gray-800 mt-1 leading-snug">${replyTag}${c.content}</div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // 点击某条评论，准备回复
+        function setReply(cid, uname) {
+            replyToId = cid;
+            const inp = document.getElementById('inp');
+            inp.placeholder = `回复 @${uname}...`;
+            inp.focus();
+        }
+
+        // 发送评论
+        async function send() {
+            const inp = document.getElementById('inp');
+            const c = inp.value.trim();
+            if(!c) return toast('内容不能为空');
+            
+            // 构建请求体
+            const body = { post_id: parseInt(pid), content: c };
+            if (replyToId) body.parent_id = replyToId;
+
+            const res = await api('/comment/create', 'POST', body);
+            if(res) {
+                toast('发送成功');
+                inp.value = '';
+                inp.placeholder = '说点什么...';
+                replyToId = null; // 重置回复状态
+                loadComments(); // 重新加载评论区
+            }
+        }
+        
+        // 删除评论
+        async function delComment(cid) {
+            if(!confirm('确定删除这条评论吗？')) return;
+            const res = await api(`/comment/${cid}`, 'DELETE');
+            if(res) {
+                toast('已删除');
+                loadComments();
+            }
+        }
+
+        // 删除帖子
+        async function delPost(id) {
+            if(!confirm('确定删除这条帖子吗？')) return;
+            const res = await api(`/post/${id}`, 'DELETE');
+            if(res) {
+                toast('删除成功');
+                setTimeout(() => history.back(), 500);
+            }
+        }
+        
+        // 收藏/取消收藏
+        async function toggleFav(btn) {
+            // 乐观更新 UI
+            const isFav = btn.classList.contains('text-yellow-500');
+            if(isFav) {
+                btn.classList.remove('text-yellow-500');
+                btn.classList.add('text-gray-400');
+                btn.querySelector('i').className = 'far fa-star mr-1';
+            } else {
+                btn.classList.add('text-yellow-500');
+                btn.classList.remove('text-gray-400');
+                btn.querySelector('i').className = 'fas fa-star mr-1';
+            }
+            await api('/interaction/favorite', 'POST', {post_id: pid});
+        }
+
+        // 初始化
+        load();
+    </script>
+</body>
+</html>

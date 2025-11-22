@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>注册</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white p-6 min-h-screen">
+    <h1 class="text-2xl font-bold text-blue-600 mb-6 mt-4">注册新账号</h1>
+    <form id="reg-form" class="space-y-4">
+        <input type="text" name="username" class="w-full p-3 border rounded-lg" placeholder="用户名" required>
+        <input type="password" name="password" class="w-full p-3 border rounded-lg" placeholder="密码" required>
+        <input type="password" name="confirm_password" class="w-full p-3 border rounded-lg" placeholder="确认密码" required>
+        <div class="border-t pt-4"><p class="text-xs text-red-500 mb-2">* 实名认证信息 (保密)</p>
+            <input type="text" name="real_name" class="w-full p-3 border rounded-lg mb-2" placeholder="真实姓名" required>
+            <label class="flex items-center mb-2"><input type="checkbox" id="is_alumni" class="mr-2"> 我是校友</label>
+            <div id="stu-fields" class="grid grid-cols-2 gap-2">
+                <input type="text" name="grade" class="p-3 border rounded-lg" placeholder="年级">
+                <input type="text" name="class_name" class="p-3 border rounded-lg" placeholder="班级">
+            </div>
+        </div>
+        <button type="submit" class="w-full bg-green-600 text-white p-3 rounded-lg font-bold">注册</button>
+    </form>
+    <div class="mt-4 text-center"><a href="index.html" class="text-gray-500">返回登录</a></div>
+    <script src="utils.js"></script>
+    <script>
+        document.getElementById('is_alumni').onchange = e => document.getElementById('stu-fields').style.display = e.target.checked ? 'none' : 'grid';
+        document.getElementById('reg-form').onsubmit = async e => {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const d = Object.fromEntries(fd.entries());
+            d.is_alumni = document.getElementById('is_alumni').checked;
+            if(d.is_alumni) { delete d.grade; delete d.class_name; }
+            const res = await api('/auth/register', 'POST', d);
+            if(res) { toast('注册成功'); setTimeout(()=>window.location.href='index.html', 1000); }
+        };
+    </script>
+</body>
+</html>
