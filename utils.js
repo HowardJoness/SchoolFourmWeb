@@ -1,5 +1,5 @@
-const API_BASE = 'http://120.26.89.13:8000/api';
-const SERVER_URL = 'http://120.26.89.13:8000';
+const API_BASE = 'http://api.howardjones.dev/api';
+const SERVER_URL = 'http://api.howardjones.dev:8000';
 
 // 获取完整头像URL
 function getAvatarUrl(url) {
@@ -77,3 +77,4 @@ function renderBottomNav(activePage) {
     document.body.appendChild(nav);
 
 }
+
