@@ -1,5 +1,5 @@
-const API_BASE = 'https://api.howardjones.dev/api';
-const SERVER_URL = 'https://api.howardjones.dev:8000';
+const API_BASE = 'https://python-hello-world-2sn4egyrt-howard-jones-projects.vercel.app/api';
+const SERVER_URL = 'https://python-hello-world-2sn4egyrt-howard-jones-projects.vercel.app';
 
 // 获取完整头像URL
 function getAvatarUrl(url) {
@@ -77,5 +77,6 @@ function renderBottomNav(activePage) {
     document.body.appendChild(nav);
 
 }
+
 
 
